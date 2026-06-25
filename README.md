@@ -9,13 +9,42 @@ Starter implementation for AI201 Project 4. This repo gives you a clean baseline
 - `POST /appeal` lets creators contest a decision
 - `GET /log` exposes structured audit entries for documentation and grading
 
+## Architecture Summary
+
+A text submission flows through two independent detection signals (Groq LLM + stylometric heuristics), gets combined into a confidence score, maps to one of three attribution buckets, and returns a plain-language transparency label. Every decision is logged; creators can appeal via `content_id`.
+
+See [docs/architecture.md](docs/architecture.md) for Mermaid flowcharts and sequence diagrams.
+
 ## Project Structure
-- `app.py`: Flask routes
-- `detector.py`: Groq + stylometric signals
-- `scoring.py`: combined confidence score and attribution bucket
-- `labels.py`: transparency label text
-- `audit.py`: stored submissions and audit logging
-- `planning.md`: architecture and design decisions
+
+```
+ai201-project4-provenance-guard/
+├── app.py              Flask routes
+├── detector.py         Groq LLM + stylometric signals
+├── scoring.py          confidence scoring + attribution buckets
+├── labels.py           transparency label text
+├── audit.py            submission storage + JSONL audit log
+├── planning.md         design decisions (written before code)
+├── docs/
+│   ├── architecture.md       Mermaid diagrams
+│   ├── api-flow.md           endpoint reference
+│   ├── audit-log.md          log schema
+│   └── development-history.md milestone log
+└── examples/
+    ├── sample_requests.md    curl commands
+    └── test_inputs.md        calibration test cases
+```
+
+## Documentation
+
+| Document | Contents |
+|----------|----------|
+| [docs/architecture.md](docs/architecture.md) | System flowchart, component diagram, submit/appeal sequence diagrams |
+| [docs/api-flow.md](docs/api-flow.md) | Endpoint reference with example request/response JSON |
+| [docs/audit-log.md](docs/audit-log.md) | Audit log schema for submission and appeal events |
+| [docs/development-history.md](docs/development-history.md) | Milestone log (M1–M6) with goals, files, and verification steps |
+| [examples/sample_requests.md](examples/sample_requests.md) | Copy-paste curl commands |
+| [examples/test_inputs.md](examples/test_inputs.md) | Test texts for calibrating confidence scoring |
 
 ## Setup
 ```bash
@@ -38,27 +67,8 @@ python app.py
 ```
 
 ## Example Requests
-Submit text:
 
-```bash
-curl -s -X POST http://localhost:5000/submit \
-  -H "Content-Type: application/json" \
-  -d '{"text": "The sun dropped behind the houses and the whole block went gold for a minute.", "creator_id": "test-user-1"}'
-```
-
-Appeal a decision:
-
-```bash
-curl -s -X POST http://localhost:5000/appeal \
-  -H "Content-Type: application/json" \
-  -d '{"content_id": "PASTE_ID_HERE", "creator_reasoning": "I wrote this from personal experience."}'
-```
-
-View the audit log:
-
-```bash
-curl -s http://localhost:5000/log
-```
+See [examples/sample_requests.md](examples/sample_requests.md) for full curl commands including rate-limit testing.
 
 ## Current Design Choices
 This starter uses:

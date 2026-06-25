@@ -55,6 +55,9 @@ These are the exact text variants the API will return.
 3. Very short submissions can be too small for stable stylometric analysis, so the starter falls back to a neutral heuristic score.
 
 ## Architecture
+
+Mermaid diagrams (flowchart, component map, sequence diagrams) live in [docs/architecture.md](docs/architecture.md). The ASCII summary below is the planning baseline.
+
 ```text
 POST /submit
   -> validate JSON body
@@ -76,6 +79,8 @@ POST /appeal
 ```
 
 The submission flow starts with raw text and creator metadata, turns that into two signal scores, merges them into a single AI-likelihood score, and maps that score to a plain-language label. The appeal flow reuses the stored `content_id`, preserves the original decision, and records the creator's challenge without silently reclassifying the content.
+
+Milestone progress is tracked in [docs/development-history.md](docs/development-history.md).
 
 ## API Surface
 ### `POST /submit`
