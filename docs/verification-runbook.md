@@ -89,6 +89,85 @@ run_test() {
 - Always use `http://` (with `//`).
 - Raw JSON files in `evidence/logs/` are the source of truth for README evidence.
 - `evidence/` is gitignored — keep files locally.
+- **Use the full text blocks below** — do not shorten with `...`. Truncated text breaks stylometric/boilerplate scoring.
+
+---
+
+## Test input corpus (from `examples/test_inputs.md`)
+
+Canonical copy-paste texts for verification. Source: AI201 Project 4 spec (`projects.md`, Milestone 4 calibration set).
+
+**Provenance / ground truth:** These are **course-authored calibration samples**, not real posts with external authorship proof. They are labeled by *intended category* for scoring calibration, not verified human/AI ground truth in a legal sense. For README evidence, cite them as "calibration inputs from the project spec" — you do not need external references.
+
+| Sample | Intended label | Origin / notes |
+|--------|----------------|----------------|
+| AI boilerplate paragraph | Clearly AI-generated | Course spec example; written to exhibit template AI transitions |
+| Ramen review | Clearly human-written | Course spec example; casual voice, specific anecdote |
+| Monetary policy paragraph | Borderline / formal human | Course spec example; academic tone, may score mid-high |
+| Remote work paragraph | Borderline / edited AI | Course spec example; neutral essay style |
+| "Sunset was nice today." | Very short (fallback test) | Course spec extension in `test_inputs.md` |
+| Economic development paragraph | Formal human (false-positive risk) | `test_inputs.md` edge case |
+| Rain poem | Poetry (false-positive risk) | `test_inputs.md` edge case |
+
+### Likely AI-generated
+
+```text
+Artificial intelligence represents a transformative paradigm shift in modern society.
+It is important to note that while the benefits of AI are numerous, it is equally
+essential to consider the ethical implications. Furthermore, stakeholders across
+various sectors must collaborate to ensure responsible deployment.
+```
+
+### Likely human-written
+
+```text
+ok so i finally tried that new ramen place downtown and honestly?
+underwhelming. the broth was fine but they put WAY too much sodium in it and
+i was thirsty for like three hours after. my friend got the spicy version and
+said it was better. probably won't go back unless someone drags me there
+```
+
+### Uncertain — formal human writing
+
+```text
+The relationship between monetary policy and asset price inflation has been
+extensively studied in the literature. Central banks face a fundamental tension
+between their mandate for price stability and the unintended consequences of
+prolonged low interest rates on equity and real estate valuations.
+```
+
+### Uncertain — lightly edited AI output
+
+```text
+I've been thinking a lot about remote work lately. There are genuine tradeoffs —
+flexibility and no commute on one side, isolation and blurred work-life boundaries
+on the other. Studies show productivity varies widely by individual and role type.
+```
+
+### Very short text (stylometric fallback)
+
+```text
+Sunset was nice today.
+```
+
+### Polished formal human writing (false-positive risk)
+
+```text
+The relationship between economic development and environmental sustainability
+requires careful consideration of trade-offs. While industrial growth has lifted
+millions from poverty, it has also placed unprecedented pressure on natural
+resources and ecosystems worldwide.
+```
+
+### Poetry / repetition (false-positive risk)
+
+```text
+rain on the roof
+rain on the roof
+rain on the roof
+and i am still here
+waiting
+```
 
 ---
 
@@ -134,7 +213,7 @@ echo "$CONTENT_ID" | tee "$LOG_DIR/content_id_for_appeal.txt"
 
 ### 1c. All 3 label variants reachable
 
-Submit each sample. Check `attribution` in the response.
+Submit each sample using the **full text** from [Test input corpus](#test-input-corpus-from-examplestest_inputsmd) above. Check `attribution` in the response.
 
 **Target A — likely AI** (expect `attribution: likely_ai`, confidence ≥ 0.75):
 
@@ -240,6 +319,8 @@ Goal: confirm scores **vary meaningfully** across clearly different inputs. If t
 
 ### 2a. Run all four spec test cases
 
+Use the **full text** from [Test input corpus](#test-input-corpus-from-examplestest_inputsmd). The ramen sample must include the full paragraph (not a shortened version).
+
 **Clearly AI:**
 
 ```bash
@@ -253,7 +334,7 @@ run_test "09_calibrate_ai" -X POST "$BASE_URL/submit" \
 ```bash
 run_test "10_calibrate_human" -X POST "$BASE_URL/submit" \
   -H "Content-Type: application/json" \
-  -d '{"text": "ok so i finally tried that new ramen place downtown and honestly? underwhelming. the broth was fine but they put WAY too much sodium in it and i was thirsty for like three hours after.", "creator_id": "calibrate-human"}'
+  -d '{"text": "ok so i finally tried that new ramen place downtown and honestly? underwhelming. the broth was fine but they put WAY too much sodium in it and i was thirsty for like three hours after. my friend got the spicy version and said it was better. probably won'\''t go back unless someone drags me there", "creator_id": "calibrate-human"}'
 ```
 
 **Borderline — formal human:**
