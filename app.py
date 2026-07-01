@@ -1,3 +1,4 @@
+import os
 import uuid
 
 from flask import Flask, jsonify, request
@@ -108,4 +109,7 @@ def log_view():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    host = os.getenv("FLASK_HOST", "0.0.0.0")
+    port = int(os.getenv("FLASK_PORT", "5000"))
+    print(f"Provenance Guard listening on http://{host}:{port}")
+    app.run(debug=True, host=host, port=port)

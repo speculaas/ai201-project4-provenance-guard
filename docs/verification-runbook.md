@@ -2,6 +2,8 @@
 
 Use this checklist to run the app, calibrate scoring, and collect evidence for your final README. Work in **two terminals**.
 
+All test output is saved under `evidence/logs/` so you can paste into README later (or ask Cursor to do it from those files).
+
 ---
 
 ## Before you start
@@ -12,19 +14,51 @@ Use this checklist to run the app, calibrate scoring, and collect evidence for y
 cd /Users/watney/git/zimmnotes/chat/codepath/ai201/m1/w4/ai201-project4-provenance-guard
 source .venv/bin/activate
 cp .env.example .env   # only first time
-# edit .env and set GROQ_API_KEY=...
+# edit .env: GROQ_API_KEY=...  (FLASK_HOST and FLASK_PORT are optional)
 python app.py
 ```
 
-**Terminal 2 — run all tests below.**
+The server binds to **`0.0.0.0`** by default (all interfaces), not just localhost. You should see:
 
-**Tip:** Always use `http://localhost:5000` (with `//`). Pipe to `python3 -m json.tool` for readable JSON.
+```text
+Provenance Guard listening on http://0.0.0.0:5000
+```
 
-**Optional — save outputs to a folder:**
+**Terminal 2 — set base URL and log directory:**
 
 ```bash
-mkdir -p evidence
+cd /Users/watney/git/zimmnotes/chat/codepath/ai201/m1/w4/ai201-project4-provenance-guard
+
+# Same machine:
+export BASE_URL="http://localhost:5000"
+
+# From another device on your LAN, use your Mac's IP instead:
+# export BASE_URL="http://192.168.1.XXX:5000"
+
+export LOG_DIR="evidence/logs"
+mkdir -p "$LOG_DIR"
+
+# Optional: one combined session log with timestamps
+export SESSION_LOG="$LOG_DIR/session.log"
+echo "=== Verification run started $(date -u +%Y-%m-%dT%H:%M:%SZ) ===" >> "$SESSION_LOG"
 ```
+
+**Helper — run curl, save raw JSON, pretty-print, append to session log:**
+
+```bash
+run_test() {
+  local name="$1"
+  shift
+  echo "=== $name $(date -u +%Y-%m-%dT%H:%M:%SZ) ===" | tee -a "$SESSION_LOG"
+  curl -s "$@" | tee "$LOG_DIR/${name}.json" | python3 -m json.tool | tee -a "$SESSION_LOG"
+  echo | tee -a "$SESSION_LOG"
+}
+```
+
+**Tips:**
+- Always use `http://` (with `//`).
+- Raw JSON files in `evidence/logs/` are the source of truth for README evidence.
+- `evidence/` is gitignored — keep files locally.
 
 ---
 
@@ -33,22 +67,21 @@ mkdir -p evidence
 ### 1a. Health check
 
 ```bash
-curl -s http://localhost:5000/ | python3 -m json.tool
+run_test "01_health" "$BASE_URL/"
 ```
 
 **Verify:** JSON lists `POST /submit`, `POST /appeal`, `GET /log`.
 
-**Record:** Not required for README (optional screenshot).
+**Saved to:** `evidence/logs/01_health.json`
 
 ---
 
 ### 1b. Basic submit — returns required fields
 
 ```bash
-curl -s -X POST http://localhost:5000/submit \
+run_test "02_submit_basic" -X POST "$BASE_URL/submit" \
   -H "Content-Type: application/json" \
-  -d '{"text": "The sun dipped below the horizon, painting the sky in hues of amber and rose.", "creator_id": "test-user-1"}' \
-  | tee evidence/submit_basic.json | python3 -m json.tool
+  -d '{"text": "The sun dipped below the horizon, painting the sky in hues of amber and rose.", "creator_id": "test-user-1"}'
 ```
 
 **Verify response includes:**
@@ -58,11 +91,13 @@ curl -s -X POST http://localhost:5000/submit \
 - [ ] `label` (plain-language text)
 - [ ] `signals.llm_score` and `signals.stylometric_score`
 
-**Record:** Save `content_id` for appeal test:
+**Saved to:** `evidence/logs/02_submit_basic.json`
+
+**Save `content_id` for appeal test:**
 
 ```bash
-export CONTENT_ID=$(python3 -c "import json; print(json.load(open('evidence/submit_basic.json'))['content_id'])")
-echo $CONTENT_ID
+export CONTENT_ID=$(python3 -c "import json; print(json.load(open('$LOG_DIR/02_submit_basic.json'))['content_id'])")
+echo "$CONTENT_ID" | tee "$LOG_DIR/content_id_for_appeal.txt"
 ```
 
 ---
@@ -74,37 +109,33 @@ Submit each sample. Check `attribution` in the response.
 **Target A — likely AI** (expect `attribution: likely_ai`, confidence ≥ 0.75):
 
 ```bash
-curl -s -X POST http://localhost:5000/submit \
+run_test "03_submit_likely_ai" -X POST "$BASE_URL/submit" \
   -H "Content-Type: application/json" \
-  -d '{"text": "Artificial intelligence represents a transformative paradigm shift in modern society. It is important to note that while the benefits of AI are numerous, it is equally essential to consider the ethical implications. Furthermore, stakeholders across various sectors must collaborate to ensure responsible deployment.", "creator_id": "test-ai"}' \
-  | tee evidence/submit_likely_ai.json | python3 -m json.tool
+  -d '{"text": "Artificial intelligence represents a transformative paradigm shift in modern society. It is important to note that while the benefits of AI are numerous, it is equally essential to consider the ethical implications. Furthermore, stakeholders across various sectors must collaborate to ensure responsible deployment.", "creator_id": "test-ai"}'
 ```
 
 **Target B — likely human** (expect `attribution: likely_human`, confidence ≤ 0.35):
 
 ```bash
-curl -s -X POST http://localhost:5000/submit \
+run_test "04_submit_likely_human" -X POST "$BASE_URL/submit" \
   -H "Content-Type: application/json" \
-  -d '{"text": "ok so i finally tried that new ramen place downtown and honestly? underwhelming. the broth was fine but they put WAY too much sodium in it and i was thirsty for like three hours after. my friend got the spicy version and said it was better. probably won'\''t go back unless someone drags me there", "creator_id": "test-human"}' \
-  | tee evidence/submit_likely_human.json | python3 -m json.tool
+  -d '{"text": "ok so i finally tried that new ramen place downtown and honestly? underwhelming. the broth was fine but they put WAY too much sodium in it and i was thirsty for like three hours after. my friend got the spicy version and said it was better. probably won'\''t go back unless someone drags me there", "creator_id": "test-human"}'
 ```
 
 **Target C — uncertain** (expect `attribution: uncertain`, confidence 0.36–0.74):
 
 ```bash
-curl -s -X POST http://localhost:5000/submit \
+run_test "05_submit_uncertain" -X POST "$BASE_URL/submit" \
   -H "Content-Type: application/json" \
-  -d '{"text": "The relationship between monetary policy and asset price inflation has been extensively studied in the literature. Central banks face a fundamental tension between their mandate for price stability and the unintended consequences of prolonged low interest rates on equity and real estate valuations.", "creator_id": "test-borderline"}' \
-  | tee evidence/submit_uncertain.json | python3 -m json.tool
+  -d '{"text": "The relationship between monetary policy and asset price inflation has been extensively studied in the literature. Central banks face a fundamental tension between their mandate for price stability and the unintended consequences of prolonged low interest rates on equity and real estate valuations.", "creator_id": "test-borderline"}'
 ```
 
 If borderline text does not land in `uncertain`, also try:
 
 ```bash
-curl -s -X POST http://localhost:5000/submit \
+run_test "05b_submit_uncertain_alt" -X POST "$BASE_URL/submit" \
   -H "Content-Type: application/json" \
-  -d '{"text": "I'\''ve been thinking a lot about remote work lately. There are genuine tradeoffs — flexibility and no commute on one side, isolation and blurred work-life boundaries on the other. Studies show productivity varies widely by individual and role type.", "creator_id": "test-borderline-2"}' \
-  | tee evidence/submit_uncertain_alt.json | python3 -m json.tool
+  -d '{"text": "I'\''ve been thinking a lot about remote work lately. There are genuine tradeoffs — flexibility and no commute on one side, isolation and blurred work-life boundaries on the other. Studies show productivity varies widely by individual and role type.", "creator_id": "test-borderline-2"}'
 ```
 
 **Verify checklist:**
@@ -113,17 +144,16 @@ curl -s -X POST http://localhost:5000/submit \
 - [ ] Got `uncertain` at least once
 - [ ] `label` text changes (not identical across all three)
 
-**Record:** Keep the three JSON files (or note attribution + confidence for each).
+**Saved to:** `03_submit_likely_ai.json`, `04_submit_likely_human.json`, `05_submit_uncertain.json`
 
 ---
 
 ### 1d. Appeal — status becomes `under_review`
 
 ```bash
-curl -s -X POST http://localhost:5000/appeal \
+run_test "06_appeal" -X POST "$BASE_URL/appeal" \
   -H "Content-Type: application/json" \
-  -d "{\"content_id\": \"$CONTENT_ID\", \"creator_reasoning\": \"I wrote this myself from personal experience. I am a non-native English speaker and my writing style may appear more formal than typical.\"}" \
-  | tee evidence/appeal_response.json | python3 -m json.tool
+  -d "{\"content_id\": \"$CONTENT_ID\", \"creator_reasoning\": \"I wrote this myself from personal experience. I am a non-native English speaker and my writing style may appear more formal than typical.\"}"
 ```
 
 **Verify:**
@@ -131,14 +161,14 @@ curl -s -X POST http://localhost:5000/appeal \
 - [ ] `appeal_reasoning` echoed back
 - [ ] `"message": "Appeal received and marked for review."`
 
-**Record:** Save `evidence/appeal_response.json`.
+**Saved to:** `evidence/logs/06_appeal.json`
 
 ---
 
 ### 1e. Audit log — submissions + appeal
 
 ```bash
-curl -s http://localhost:5000/log | tee evidence/audit_log.json | python3 -m json.tool
+run_test "07_audit_log" "$BASE_URL/log"
 ```
 
 **Verify:**
@@ -147,7 +177,7 @@ curl -s http://localhost:5000/log | tee evidence/audit_log.json | python3 -m jso
 - [ ] Each submission entry has: `content_id`, `attribution`, `confidence`, `llm_score`, `stylometric_score`
 - [ ] Appeal entry has: `status: under_review`, `appeal_reasoning`
 
-**Record:** Save full log output for README (trim to 3–4 representative entries when pasting).
+**Saved to:** `evidence/logs/07_audit_log.json` → **paste into README**
 
 ---
 
@@ -156,18 +186,21 @@ curl -s http://localhost:5000/log | tee evidence/audit_log.json | python3 -m jso
 **Wait ~1 minute** after earlier submits, or restart the server, so you start fresh.
 
 ```bash
+echo "=== rate limit test $(date -u +%Y-%m-%dT%H:%M:%SZ) ===" | tee "$LOG_DIR/08_rate_limit.txt"
 for i in $(seq 1 12); do
-  curl -s -o /dev/null -w "request $i: %{http_code}\n" -X POST http://localhost:5000/submit \
+  curl -s -o /dev/null -w "request $i: %{http_code}\n" -X POST "$BASE_URL/submit" \
     -H "Content-Type: application/json" \
-    -d '{"text": "Rate limit test only.", "creator_id": "ratelimit-test"}'
-done | tee evidence/rate_limit_output.txt
+    -d '{"text": "Rate limit test only.", "creator_id": "ratelimit-test"}' \
+    | tee -a "$LOG_DIR/08_rate_limit.txt"
+done
+cat "$LOG_DIR/08_rate_limit.txt" >> "$SESSION_LOG"
 ```
 
 **Verify:**
 - [ ] Requests 1–10 → `200`
 - [ ] Requests 11–12 → `429`
 
-**Record:** Paste `evidence/rate_limit_output.txt` into README.
+**Saved to:** `evidence/logs/08_rate_limit.txt` → **paste into README**
 
 ---
 
@@ -180,37 +213,33 @@ Goal: confirm scores **vary meaningfully** across clearly different inputs. If t
 **Clearly AI:**
 
 ```bash
-curl -s -X POST http://localhost:5000/submit \
+run_test "09_calibrate_ai" -X POST "$BASE_URL/submit" \
   -H "Content-Type: application/json" \
-  -d '{"text": "Artificial intelligence represents a transformative paradigm shift in modern society. It is important to note that while the benefits of AI are numerous, it is equally essential to consider the ethical implications. Furthermore, stakeholders across various sectors must collaborate to ensure responsible deployment.", "creator_id": "calibrate-ai"}' \
-  | python3 -m json.tool
+  -d '{"text": "Artificial intelligence represents a transformative paradigm shift in modern society. It is important to note that while the benefits of AI are numerous, it is equally essential to consider the ethical implications. Furthermore, stakeholders across various sectors must collaborate to ensure responsible deployment.", "creator_id": "calibrate-ai"}'
 ```
 
 **Clearly human:**
 
 ```bash
-curl -s -X POST http://localhost:5000/submit \
+run_test "10_calibrate_human" -X POST "$BASE_URL/submit" \
   -H "Content-Type: application/json" \
-  -d '{"text": "ok so i finally tried that new ramen place downtown and honestly? underwhelming. the broth was fine but they put WAY too much sodium in it and i was thirsty for like three hours after.", "creator_id": "calibrate-human"}' \
-  | python3 -m json.tool
+  -d '{"text": "ok so i finally tried that new ramen place downtown and honestly? underwhelming. the broth was fine but they put WAY too much sodium in it and i was thirsty for like three hours after.", "creator_id": "calibrate-human"}'
 ```
 
 **Borderline — formal human:**
 
 ```bash
-curl -s -X POST http://localhost:5000/submit \
+run_test "11_calibrate_formal" -X POST "$BASE_URL/submit" \
   -H "Content-Type: application/json" \
-  -d '{"text": "The relationship between monetary policy and asset price inflation has been extensively studied in the literature. Central banks face a fundamental tension between their mandate for price stability and the unintended consequences of prolonged low interest rates on equity and real estate valuations.", "creator_id": "calibrate-formal"}' \
-  | python3 -m json.tool
+  -d '{"text": "The relationship between monetary policy and asset price inflation has been extensively studied in the literature. Central banks face a fundamental tension between their mandate for price stability and the unintended consequences of prolonged low interest rates on equity and real estate valuations.", "creator_id": "calibrate-formal"}'
 ```
 
 **Borderline — lightly edited AI:**
 
 ```bash
-curl -s -X POST http://localhost:5000/submit \
+run_test "12_calibrate_edited_ai" -X POST "$BASE_URL/submit" \
   -H "Content-Type: application/json" \
-  -d '{"text": "I'\''ve been thinking a lot about remote work lately. There are genuine tradeoffs — flexibility and no commute on one side, isolation and blurred work-life boundaries on the other. Studies show productivity varies widely by individual and role type.", "creator_id": "calibrate-edited-ai"}' \
-  | python3 -m json.tool
+  -d '{"text": "I'\''ve been thinking a lot about remote work lately. There are genuine tradeoffs — flexibility and no commute on one side, isolation and blurred work-life boundaries on the other. Studies show productivity varies widely by individual and role type.", "creator_id": "calibrate-edited-ai"}'
 ```
 
 ### 2b. Fill in this calibration table
@@ -222,6 +251,8 @@ curl -s -X POST http://localhost:5000/submit \
 | Formal human | | | | | |
 | Edited AI | | | | | |
 
+Copy values from `09_calibrate_ai.json` through `12_calibrate_edited_ai.json`.
+
 **Pass criteria:**
 - [ ] AI sample scores **noticeably higher** than human sample
 - [ ] Borderline cases land in `uncertain` or mid-range confidence (not same as extremes)
@@ -229,17 +260,22 @@ curl -s -X POST http://localhost:5000/submit \
 
 **If scores look wrong:** note which signal is off (`llm_score` vs `stylometric_score`) before changing code.
 
-**Record:** Pick **two contrasting examples** (one high-confidence, one lower) for README — see section 3.
+**Record:** Pick **two contrasting examples** for README — see section 3.
 
 ---
 
 ## 3. Collect grading evidence (~20 min)
 
-Paste these into your final `README.md`. Use real output from your runs above.
+Paste into final `README.md` using files from `evidence/logs/`.
 
 ### 3a. Confidence scoring — two examples (required)
 
-Pick one high-confidence case and one lower-confidence case. Template:
+| README section | Source file |
+|----------------|-------------|
+| High-confidence example | `03_submit_likely_ai.json` or `09_calibrate_ai.json` |
+| Lower-confidence example | `05_submit_uncertain.json` or `10_calibrate_human.json` |
+
+Template:
 
 ```markdown
 ### Example 1 — high-confidence AI
@@ -257,13 +293,13 @@ Pick one high-confidence case and one lower-confidence case. Template:
 - **stylometric_score:** 0.XX
 ```
 
-Source files: `evidence/submit_likely_ai.json` + `evidence/submit_uncertain.json` (or similar).
-
 ---
 
 ### 3b. Audit log sample — 3+ entries (required)
 
-Paste trimmed JSON from `evidence/audit_log.json`:
+| README section | Source file |
+|----------------|-------------|
+| Audit log evidence | `07_audit_log.json` |
 
 - [ ] At least 2 `submission` events
 - [ ] At least 1 `appeal` event
@@ -272,26 +308,40 @@ Paste trimmed JSON from `evidence/audit_log.json`:
 
 ### 3c. Rate limiting (required)
 
-Paste from `evidence/rate_limit_output.txt` and add reasoning, e.g.:
+| README section | Source file |
+|----------------|-------------|
+| Rate-limit output | `08_rate_limit.txt` |
+
+Add reasoning, e.g.:
 
 > Limits: `10 per minute; 100 per day` on `POST /submit`.
 > A typical creator submits a few pieces per session; 10/min prevents scripted flooding while allowing normal use.
 
 ---
 
-### 3d. Transparency labels (required)
+### 3d. Appeal workflow (required)
 
-Already in README table — confirm exact text matches what API returns for each bucket.
+| README section | Source file |
+|----------------|-------------|
+| Appeal response | `06_appeal.json` |
 
 ---
 
-### 3e. Still to write in README (M6)
+### 3e. Transparency labels (required)
+
+Already in README table — confirm exact text matches what API returns in `03_`, `04_`, `05_` submit files.
+
+---
+
+### 3f. Still to write in README (M6)
 
 - [ ] **Detection signals** — why Groq + stylometrics, what each misses
 - [ ] **Known limitations** — one specific content type your system gets wrong
 - [ ] **Spec reflection** — one way spec helped, one divergence
 - [ ] **AI usage** — 2 specific instances (what you asked, what you changed)
 - [ ] **Portfolio walkthrough video** — record separately
+
+**Later:** ask Cursor to read `evidence/logs/` and draft README sections from the saved files.
 
 ---
 
@@ -301,6 +351,8 @@ Already in README table — confirm exact text matches what API returns for each
 |---------|-----|
 | `Expecting value: line 1 column 1` | Use `http://` not `http:`; ensure server is running |
 | `Connection refused` | Run `python app.py` in Terminal 1 |
+| Can't connect from phone/another PC | Use `BASE_URL=http://YOUR_LAN_IP:5000`; server must bind `0.0.0.0` (default) |
+| macOS firewall blocks LAN access | System Settings → Network → Firewall → allow Python |
 | All scores ~0.5 | Set `GROQ_API_KEY` in `.env` and restart server |
 | Can't reach `uncertain` | Try borderline texts; widen middle band in `scoring.py` if needed |
 | Rate limit test all 429 | Wait 1 minute or restart server |
@@ -310,14 +362,21 @@ Already in README table — confirm exact text matches what API returns for each
 ## Files you should have when done
 
 ```
-evidence/
-├── submit_basic.json
-├── submit_likely_ai.json
-├── submit_likely_human.json
-├── submit_uncertain.json
-├── appeal_response.json
-├── audit_log.json
-└── rate_limit_output.txt
+evidence/logs/
+├── session.log                  # combined timestamped log (optional)
+├── content_id_for_appeal.txt
+├── 01_health.json
+├── 02_submit_basic.json
+├── 03_submit_likely_ai.json
+├── 04_submit_likely_human.json
+├── 05_submit_uncertain.json
+├── 06_appeal.json
+├── 07_audit_log.json            # → README audit log section
+├── 08_rate_limit.txt            # → README rate limit section
+├── 09_calibrate_ai.json         # → README confidence example (high)
+├── 10_calibrate_human.json      # → README confidence example (low)
+├── 11_calibrate_formal.json
+└── 12_calibrate_edited_ai.json
 ```
 
-The `evidence/` folder is for your local notes — add it to `.gitignore` if you don't want to commit test artifacts. **What graders need is the content pasted into README**, not necessarily the folder itself.
+The `evidence/` folder is gitignored. **Graders need the content in README** — the log files are your working copies until you paste or ask Cursor to draft README sections from them.

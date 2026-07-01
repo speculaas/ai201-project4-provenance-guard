@@ -66,6 +66,8 @@ Run the API:
 python app.py
 ```
 
+By default the server listens on **`0.0.0.0:5000`** (all network interfaces). Use `http://localhost:5000` on the same machine, or `http://YOUR_LAN_IP:5000` from another device. Override with `FLASK_HOST` / `FLASK_PORT` in `.env`.
+
 ## Example Requests
 
 See [examples/sample_requests.md](examples/sample_requests.md) for full curl commands including rate-limit testing.
