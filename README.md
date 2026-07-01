@@ -193,8 +193,15 @@ python app.py
 
 Server binds to `0.0.0.0:5000` by default. See [examples/sample_requests.md](examples/sample_requests.md) for curl commands.
 
+## Portfolio Walkthrough
+
+Short (~2 min) screen recording: submit AI + human samples, show differing confidence scores, file an appeal, and skim `GET /log`. Submit the same URL through the **Course Portal** (required for grading).
+
+**Video link:** [ADD YOUR VIDEO URL HERE](https://REPLACE_WITH_YOUR_VIDEO_URL)
+
+_Script outline: see demo commands in [docs/verification-runbook.md](docs/verification-runbook.md) and the Confidence Scoring / Appeals / Audit Log sections above._
+
 ## Still To Do Before Submission
 
-- [ ] Optional: run calibration test 12 (lightly edited AI) from `docs/verification-runbook.md` section 2
-- [ ] Record portfolio walkthrough video (~2 min)
-- [ ] Submit repo link via Course Portal
+- [ ] Replace the portfolio walkthrough placeholder URL above with your recorded video link
+- [ ] Submit **GitHub repo URL** and **video URL** via Course Portal
