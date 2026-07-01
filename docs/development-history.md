@@ -67,8 +67,8 @@ Response includes `content_id`, `attribution`, `confidence`, and `label`.
 **Files touched:** `detector.py`, `scoring.py`, `audit.py`
 
 **What was implemented:**
-- `stylometric_signal()` computes sentence-length variance, type-token ratio, punctuation density
-- `combine_signal_scores()` weighted average: `0.65 * llm + 0.35 * stylometric`
+- `stylometric_signal()` computes sentence-length variance, type-token ratio, punctuation density, and AI boilerplate phrase density
+- `combine_signal_scores()` weighted average: `0.80 * llm + 0.20 * stylometric` (with disagreement + template-AI overrides)
 - `classify_from_score()` maps to `likely_human` / `uncertain` / `likely_ai`
 - Audit log records both individual signal scores
 

@@ -4,11 +4,41 @@ Use this checklist to run the app, calibrate scoring, and collect evidence for y
 
 All test output is saved under `evidence/logs/` so you can paste into README later (or ask Cursor to do it from those files).
 
+**Scoring version:** runs after 2026-07-01 use boilerplate-aware stylometrics and `80/20` signal weighting. Archive older runs before re-testing (see below).
+
+---
+
+## Archive prior evidence before re-running
+
+If you already ran tests with an older scoring version, **do not overwrite** those files — move them aside first:
+
+```bash
+cd /Users/watney/git/zimmnotes/chat/codepath/ai201/m1/w4/ai201-project4-provenance-guard
+
+# Descriptive name: date + what was wrong + scoring generation
+ARCHIVE_LABEL="2026-07-01T041039Z-pre-boilerplate-weights-65-35"
+mkdir -p evidence/archive
+mv evidence/logs "evidence/archive/${ARCHIVE_LABEL}"
+mkdir -p evidence/logs
+echo "Archived prior run to evidence/archive/${ARCHIVE_LABEL}"
+```
+
+**Naming convention:** `evidence/archive/<UTC-timestamp>-<short-description>/`
+
+| Example folder name | When to use |
+|---------------------|-------------|
+| `2026-07-01T041039Z-pre-boilerplate-weights-65-35` | Before boilerplate feature + 80/20 weights |
+| `2026-07-01T120000Z-post-calibration-v2` | After a scoring tweak, keeping v2 evidence |
+
+Keep archived folders locally (gitignored). Use the **latest** `evidence/logs/` for README evidence.
+
 ---
 
 ## Before you start
 
 **Terminal 1 — start the server (leave running):**
+
+Restart the server after code changes so detection/scoring updates load.
 
 ```bash
 cd /Users/watney/git/zimmnotes/chat/codepath/ai201/m1/w4/ai201-project4-provenance-guard
@@ -362,21 +392,15 @@ Already in README table — confirm exact text matches what API returns in `03_`
 ## Files you should have when done
 
 ```
-evidence/logs/
-├── session.log                  # combined timestamped log (optional)
-├── content_id_for_appeal.txt
-├── 01_health.json
-├── 02_submit_basic.json
-├── 03_submit_likely_ai.json
-├── 04_submit_likely_human.json
-├── 05_submit_uncertain.json
-├── 06_appeal.json
-├── 07_audit_log.json            # → README audit log section
-├── 08_rate_limit.txt            # → README rate limit section
-├── 09_calibrate_ai.json         # → README confidence example (high)
-├── 10_calibrate_human.json      # → README confidence example (low)
-├── 11_calibrate_formal.json
-└── 12_calibrate_edited_ai.json
+evidence/
+├── archive/
+│   └── 2026-07-01T041039Z-pre-boilerplate-weights-65-35/   # old run (example)
+│       ├── 03_submit_likely_ai.json
+│       └── ...
+└── logs/                        # current run — use for README
+    ├── session.log
+    ├── 01_health.json
+    ...
 ```
 
-The `evidence/` folder is gitignored. **Graders need the content in README** — the log files are your working copies until you paste or ask Cursor to draft README sections from them.
+The `evidence/` folder is gitignored. **Graders need the content in README** — use the latest `evidence/logs/` only.

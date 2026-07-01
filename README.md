@@ -75,8 +75,8 @@ See [examples/sample_requests.md](examples/sample_requests.md) for full curl com
 ## Current Design Choices
 This starter uses:
 - Groq as the first signal
-- stylometric heuristics as the second signal
-- a conservative weighted average (`0.65` LLM, `0.35` stylometric)
+- stylometric heuristics as the second signal (structural uniformity + AI boilerplate phrase density)
+- a weighted average (`0.80` LLM, `0.20` stylometric; `0.88`/`0.12` when signals disagree sharply)
 - a wide uncertain band to reduce false positives against human writers
 
 ## Transparency Label Text

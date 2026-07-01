@@ -11,18 +11,22 @@ Provenance Guard is a backend service for a creative platform that accepts a tex
 - **Blind spots:** it can over-flag polished, formal, edited, or non-native-English human writing.
 
 ### Signal 2: Stylometric heuristics
-- **What it measures:** structural features of the text that can be computed without another model call.
-- **Metrics in this starter:** sentence-length variance, type-token ratio, and punctuation density.
+- **What it measures:** structural and lexical features of the text that can be computed without another model call.
+- **Metrics:** sentence-length variance, type-token ratio, punctuation density, plus **AI boilerplate phrase density** (e.g. "Furthermore," "it is important to note," "stakeholders").
 - **Output format:** a score from `0.0` to `1.0` where higher means "more likely AI-generated," plus the raw feature values.
 - **Why I chose it:** it is a genuinely distinct signal from the LLM judgment and aligns with the project's recommended stack.
-- **Blind spots:** short texts, poetry, and intentionally minimal writing can look unusually uniform even when fully human-written.
+- **Blind spots:** short texts, poetry, and intentionally minimal writing can look unusually uniform even when fully human-written. Pure structural metrics alone can misread polished formal AI as human (high variance + rich vocabulary); boilerplate density was added to address that.
 
 ### Combination Strategy
 I combine the signals with a weighted average:
 
-`combined_score = 0.65 * llm_score + 0.35 * stylometric_score`
+`combined_score = 0.80 * llm_score + 0.20 * stylometric_score`
 
-The LLM gets more weight because it captures higher-level style and meaning, while the stylometric signal acts as an independent structural check.
+When the signals disagree by more than `0.45`, the LLM weight increases to `0.88` so polished template AI prose is not dragged into `uncertain` by structural false negatives.
+
+When boilerplate density is very high (`>= 0.85`) and the LLM score is at least `0.55`, a template-AI blend can raise the combined score: `0.60 * llm + 0.40 * boilerplate`.
+
+The LLM gets more weight because it captures higher-level style and meaning, while the stylometric signal acts as an independent structural and lexical check.
 
 ## Uncertainty Representation
 - `0.00 - 0.35`: likely human

@@ -27,7 +27,7 @@ Written when `POST /submit` completes.
 | `llm_score` | float | Signal 1 score |
 | `llm_reason` | string | Short explanation from the LLM signal |
 | `stylometric_score` | float | Signal 2 score |
-| `stylometric_features` | object | Raw feature values (`sentence_length_variance`, `type_token_ratio`, `punctuation_density`) |
+| `stylometric_features` | object | Raw feature values (`sentence_length_variance`, `type_token_ratio`, `punctuation_density`, `boilerplate_hits`, `boilerplate_score`, `structural_uniformity_score`) |
 
 **Example:**
 
