@@ -197,11 +197,11 @@ Server binds to `0.0.0.0:5000` by default. See [examples/sample_requests.md](exa
 
 Short (~2 min) screen recording: submit AI + human samples, show differing confidence scores, file an appeal, and skim `GET /log`. Submit the same URL through the **Course Portal** (required for grading).
 
-**Video link:** [ADD YOUR VIDEO URL HERE](https://REPLACE_WITH_YOUR_VIDEO_URL)
+**Video link:** [Portfolio walkthrough (~2 min)](https://www.youtube.com/watch?v=RVeWNyojswA)
 
 _Script outline: see demo commands in [docs/verification-runbook.md](docs/verification-runbook.md) and the Confidence Scoring / Appeals / Audit Log sections above._
 
 ## Still To Do Before Submission
 
-- [ ] Replace the portfolio walkthrough placeholder URL above with your recorded video link
+- [x] Portfolio walkthrough video recorded — [YouTube](https://www.youtube.com/watch?v=RVeWNyojswA)
 - [ ] Submit **GitHub repo URL** and **video URL** via Course Portal
